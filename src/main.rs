@@ -1,7 +1,9 @@
 mod builtin;
+mod config;
 mod expand;
 mod history;
 mod parser;
+mod theme;
 
 use std::env;
 use std::io::{self, Write};
@@ -30,13 +32,16 @@ fn format_user_path(full_path: &Path) -> String {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = config::load_config();
     let mut history = History::new();
 
     loop {
         let username = get_username();
         let path = format_user_path(&env::current_dir()?);
 
-        print!("[{}@ {}]> ", username, path);
+        let greeting = theme::format_greeting(&config.theme.greeting, &username, &path);
+
+        print!("{}", greeting);
         io::stdout().flush()?;
 
         let mut input = String::new();
