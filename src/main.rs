@@ -2,6 +2,7 @@ mod builtin;
 mod config;
 mod expand;
 mod history;
+mod input;
 mod parser;
 mod theme;
 
@@ -44,9 +45,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("{}", greeting);
         io::stdout().flush()?;
 
-        let mut input = String::new();
-
-        io::stdin().read_line(&mut input)?;
+        let input = match input::read_input(&history.entries) {
+            Some(input) => input,
+            None => continue,
+        };
 
         history.add(input.clone());
 
