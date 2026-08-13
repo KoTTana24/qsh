@@ -1,5 +1,6 @@
 mod builtin;
 mod config;
+mod executor;
 mod expand;
 mod history;
 mod input;
@@ -9,9 +10,9 @@ mod theme;
 use std::env;
 use std::io::{self, Write};
 use std::path::Path;
-use std::process::Command;
 
 use history::History;
+
 use whoami;
 
 fn get_username() -> String {
@@ -34,15 +35,18 @@ fn format_user_path(full_path: &Path) -> String {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = config::load_config();
+
     let mut history = History::new();
 
     loop {
         let username = get_username();
+
         let path = format_user_path(&env::current_dir()?);
 
         let greeting = theme::format_greeting(&config.theme.greeting, &username, &path);
 
         print!("{}", greeting);
+
         io::stdout().flush()?;
 
         let input = match input::read_input(&greeting, &history.entries) {
@@ -56,40 +60,43 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             continue;
         }
 
+        if input == "exit" {
+            break;
+        }
+
         history.add(input.to_string());
 
-        // Parse command
-        let parsed = match parser::parse(input) {
-            Some(command) => command,
-            None => continue,
-        };
+        // Новый parser
 
-        let command = parsed.command;
-        let args = parsed.args;
+        let tokens = parser::tokenize(input);
 
-        // Convert Vec<String> -> Vec<&str>
-        let args_ref: Vec<&str> = args.iter().map(|arg| arg.as_str()).collect();
+        println!("{:#?}", tokens);
 
-        // Try builtin command first
-        if let Some(result) = builtin::execute_builtin(&command, &args_ref) {
-            if let Err(error) = result {
-                eprintln!("qsh: {}: {}", command, error);
-            }
+        let ast = parser::parse(&tokens);
 
-            continue;
+        if let Some(ref ast) = ast {
+            executor::execute(ast.clone());
         }
 
-        // Run external command
-        match Command::new(&command).args(&args_ref).status() {
-            Ok(status) => {
-                if !status.success() {
-                    eprintln!("qsh: process exited with {}", status);
-                }
-            }
+        println!("{:#?}", ast);
 
-            Err(error) => {
-                eprintln!("qsh: {}: {}", command, error);
-            }
-        }
+        println!();
+
+        /*
+            Старый executor временно отключён.
+
+            Было:
+
+            Command::new(command)
+
+            Теперь будет:
+
+            AST
+              |
+              v
+            executor
+        */
     }
+
+    Ok(())
 }
