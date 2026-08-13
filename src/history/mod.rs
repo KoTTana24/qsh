@@ -1,5 +1,4 @@
 pub mod fuzzy;
-pub mod menu;
 
 use std::fs;
 use std::path::PathBuf;

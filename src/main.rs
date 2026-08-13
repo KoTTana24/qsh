@@ -45,18 +45,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("{}", greeting);
         io::stdout().flush()?;
 
-        let input = match input::read_input(&history.entries) {
+        let input = match input::read_input(&greeting, &history.entries) {
             Some(input) => input,
             None => continue,
         };
-
-        history.add(input.clone());
 
         let input = input.trim();
 
         if input.is_empty() {
             continue;
         }
+
+        history.add(input.to_string());
 
         // Parse command
         let parsed = match parser::parse(input) {
