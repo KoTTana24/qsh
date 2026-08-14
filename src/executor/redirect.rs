@@ -28,3 +28,13 @@ pub fn apply_stdout(command: &mut Command, redirect: Option<Redirect>) {
         }
     }
 }
+
+pub fn apply_stdin(command: &mut Command, input: Option<String>) {
+    let Some(path) = input else {
+        return;
+    };
+
+    let file = File::open(path).expect("failed to open input file");
+
+    command.stdin(Stdio::from(file));
+}

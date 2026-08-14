@@ -1,9 +1,12 @@
 #[derive(Debug, Clone, PartialEq)]
 pub enum Token {
-    Word(String),
+    Word { value: String, expand: bool },
 
     Pipe,      // |
     Semicolon, // ;
+
+    And, // &&
+    Or,  // ||
 
     RedirectOut, // >
     RedirectIn,  // <
@@ -17,68 +20,127 @@ pub fn tokenize(input: &str) -> Vec<Token> {
 
     let mut current = String::new();
 
-    let push_word = |tokens: &mut Vec<Token>, word: &mut String| {
-        if !word.is_empty() {
-            tokens.push(Token::Word(word.clone()));
+    let mut quote: Option<char> = None;
 
-            word.clear();
+    let mut expand = true;
+
+    let mut escape = false;
+
+    let mut chars = input.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        if escape {
+            current.push(c);
+
+            escape = false;
+
+            continue;
         }
-    };
 
-    let chars: Vec<char> = input.chars().collect();
+        if c == '\\' && quote != Some('\'') {
+            escape = true;
 
-    let mut i = 0;
+            continue;
+        }
 
-    while i < chars.len() {
-        match chars[i] {
+        // inside ""
+        if let Some(q) = quote {
+            if c == q {
+                quote = None;
+            } else {
+                current.push(c);
+            }
+
+            continue;
+        }
+
+        if c == '"' || c == '\'' {
+            quote = Some(c);
+
+            if c == '\'' {
+                expand = false;
+            }
+
+            continue;
+        }
+
+        match c {
             ' ' | '\t' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
             }
 
             '|' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
 
-                tokens.push(Token::Pipe);
+                if chars.peek() == Some(&'|') {
+                    chars.next();
+
+                    tokens.push(Token::Or);
+                } else {
+                    tokens.push(Token::Pipe);
+                }
             }
 
             ';' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
 
                 tokens.push(Token::Semicolon);
             }
 
             '>' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
 
-                if i + 1 < chars.len() && chars[i + 1] == '>' {
+                if chars.peek() == Some(&'>') {
+                    chars.next();
+
                     tokens.push(Token::AppendOut);
-                    i += 1;
                 } else {
                     tokens.push(Token::RedirectOut);
                 }
             }
 
             '<' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
 
                 tokens.push(Token::RedirectIn);
             }
 
             '&' => {
-                push_word(&mut tokens, &mut current);
+                push_word(&mut tokens, &mut current, &mut expand);
 
-                tokens.push(Token::Background);
+                if chars.peek() == Some(&'&') {
+                    chars.next();
+
+                    tokens.push(Token::And);
+                } else {
+                    tokens.push(Token::Background);
+                }
             }
 
-            c => {
+            _ => {
                 current.push(c);
             }
         }
-
-        i += 1;
     }
 
-    push_word(&mut tokens, &mut current);
+    if escape {
+        current.push('\\');
+    }
+
+    push_word(&mut tokens, &mut current, &mut expand);
 
     tokens
+}
+
+fn push_word(tokens: &mut Vec<Token>, word: &mut String, expand: &mut bool) {
+    if !word.is_empty() {
+        tokens.push(Token::Word {
+            value: word.clone(),
+            expand: *expand,
+        });
+
+        word.clear();
+
+        *expand = true;
+    }
 }

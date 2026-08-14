@@ -1,8 +1,9 @@
+use super::redirect;
 use std::process::{Command, Stdio};
 
 use crate::parser::Command as ShellCommand;
 
-pub fn execute(commands: Vec<ShellCommand>) {
+pub fn execute(commands: Vec<ShellCommand>) -> bool {
     let mut children = Vec::new();
 
     let mut previous_stdout = None;
@@ -18,6 +19,8 @@ pub fn execute(commands: Vec<ShellCommand>) {
 
         if index < commands.len() - 1 {
             process.stdout(Stdio::piped());
+        } else {
+            redirect::apply_stdout(&mut process, command.stdout.clone());
         }
 
         match process.spawn() {
@@ -30,12 +33,25 @@ pub fn execute(commands: Vec<ShellCommand>) {
             Err(error) => {
                 eprintln!("qsh: {}: {}", command.program, error);
 
-                return;
+                return false;
+            }
+        }
+    }
+    let mut success = true;
+
+    for mut child in children {
+        match child.wait() {
+            Ok(status) => {
+                if !status.success() {
+                    success = false;
+                }
+            }
+
+            Err(_) => {
+                success = false;
             }
         }
     }
 
-    for mut child in children {
-        let _ = child.wait();
-    }
+    success
 }

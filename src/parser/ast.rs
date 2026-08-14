@@ -21,6 +21,19 @@ pub struct Pipeline {
 #[derive(Debug, Clone)]
 pub enum Statement {
     Command(Command),
+
     Pipeline(Pipeline),
+
     Sequence(Vec<Statement>),
+
+    And(Box<Statement>, Box<Statement>),
+
+    Or(Box<Statement>, Box<Statement>),
+}
+
+#[derive(Debug, Clone)]
+pub struct Word {
+    pub value: String,
+
+    pub expand: bool,
 }
