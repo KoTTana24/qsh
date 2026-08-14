@@ -66,36 +66,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         history.add(input.to_string());
 
-        // Новый parser
+        // new parser
 
         let tokens = parser::tokenize(input);
-
-        println!("{:#?}", tokens);
 
         let ast = parser::parse(&tokens);
 
         if let Some(ref ast) = ast {
             executor::execute(ast.clone());
         }
-
-        println!("{:#?}", ast);
-
-        println!();
-
-        /*
-            Старый executor временно отключён.
-
-            Было:
-
-            Command::new(command)
-
-            Теперь будет:
-
-            AST
-              |
-              v
-            executor
-        */
     }
 
     Ok(())
