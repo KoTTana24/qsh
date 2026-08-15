@@ -1,3 +1,4 @@
+mod alias;
 mod builtin;
 mod config;
 mod executor;
@@ -64,11 +65,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
+        let input = alias::expand(input, &config.aliases);
+
         history.add(input.to_string());
 
         // new parser
 
-        let tokens = parser::tokenize(input);
+        let tokens = parser::tokenize(&input);
 
         let ast = parser::parse(&tokens);
 

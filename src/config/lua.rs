@@ -1,6 +1,6 @@
-use mlua::Lua;
-
 use super::{Config, Theme};
+use mlua::Lua;
+use std::collections::HashMap;
 
 pub fn parse(code: &str) -> Result<Config, mlua::Error> {
     let lua = Lua::new();
@@ -17,7 +17,18 @@ pub fn parse(code: &str) -> Result<Config, mlua::Error> {
         Err(_) => Config::default().theme.greeting,
     };
 
+    let mut aliases = HashMap::new();
+
+    if let Ok(table) = globals.get::<mlua::Table>("aliases") {
+        for pair in table.pairs::<String, String>() {
+            if let Ok((name, command)) = pair {
+                aliases.insert(name, command);
+            }
+        }
+    }
     Ok(Config {
         theme: Theme { greeting },
+
+        aliases,
     })
 }

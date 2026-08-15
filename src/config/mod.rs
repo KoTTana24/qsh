@@ -5,6 +5,7 @@ use std::path::PathBuf;
 #[derive(Debug, Clone)]
 pub struct Config {
     pub theme: Theme,
+    pub aliases: std::collections::HashMap<String, String>,
 }
 
 #[derive(Debug, Clone)]
@@ -18,6 +19,8 @@ impl Default for Config {
             theme: Theme {
                 greeting: "{current_directory}@{username} >".to_string(),
             },
+
+            aliases: std::collections::HashMap::new(),
         }
     }
 }
