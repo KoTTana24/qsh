@@ -47,21 +47,21 @@ qpm list
 
 qsh is designed around a simple configuration approach.
 
-Future configuration example:
+Configuration example:
 
-```toml
-[theme]
-colorscheme = "gruvobx"
-greeting = "{current_directory}@{username} >"
+`file ~/.config/qsh/config.lua`
 
-[plugins]
-enabled = [
-    "git",
-    "syntax-highlighting"
-]
+```lua
+theme = {
+	greeting = "[{username}] {current_directory} -> ",
+}
+
+aliases = {
+	c = "clear",
+	n = "nvim",
+    ll = "ls -la"
+}
 ```
-
-The configuration system is still under development.
 
 ## Installation
 
