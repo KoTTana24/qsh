@@ -1,23 +1,66 @@
-pub fn execute_builtin(command: &str, args: &[&str]) -> Option<Result<(), String>> {
+use std::env;
+
+pub fn execute(command: &str, args: &[String]) -> Option<bool> {
     match command {
-        "echo" => Some(echo(args)),
+        "echo" => {
+            echo(args);
+
+            Some(true)
+        }
+
         "cd" => Some(cd(args)),
+
+        "pwd" => {
+            pwd();
+
+            Some(true)
+        }
+
+        "exit" => Some(true),
+
         _ => None,
     }
 }
 
-use std::env;
-
-pub fn echo(args: &[&str]) -> Result<(), String> {
+fn echo(args: &[String]) {
     println!("{}", args.join(" "));
-    Ok(())
 }
 
-pub fn cd(args: &[&str]) -> Result<(), String> {
-    if args.is_empty() {
-        let home = env::var("HOME").unwrap_or_default();
-        env::set_current_dir(&home).map_err(|e| e.to_string())
+fn cd(args: &[String]) -> bool {
+    let path = if args.is_empty() {
+        match env::home_dir() {
+            Some(home) => home,
+            None => {
+                eprintln!("cd: cannot find home directory");
+                return false;
+            }
+        }
+    } else if args.len() == 1 {
+        args[0].clone().into()
     } else {
-        env::set_current_dir(args[0]).map_err(|e| e.to_string())
+        eprintln!("cd: too many arguments");
+        return false;
+    };
+
+    match env::set_current_dir(path) {
+        Ok(_) => true,
+
+        Err(error) => {
+            eprintln!("cd: {}", error);
+
+            false
+        }
+    }
+}
+
+fn pwd() {
+    match env::current_dir() {
+        Ok(path) => {
+            println!("{}", path.display());
+        }
+
+        Err(error) => {
+            eprintln!("pwd: {}", error);
+        }
     }
 }
