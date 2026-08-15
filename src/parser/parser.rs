@@ -84,16 +84,18 @@ fn parse_command(tokens: &[Token]) -> Option<Command> {
     while index < tokens.len() {
         match &tokens[index] {
             Token::Word { value, expand } => {
-                let word = if *expand {
+                let words = if *expand {
                     crate::expand::expand_word(value)
                 } else {
-                    value.clone()
+                    vec![value.clone()]
                 };
 
-                if command.program.is_empty() {
-                    command.program = word;
-                } else {
-                    command.args.push(word);
+                for word in words {
+                    if command.program.is_empty() {
+                        command.program = word;
+                    } else {
+                        command.args.push(word);
+                    }
                 }
             }
 

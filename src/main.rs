@@ -64,10 +64,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
-        let tokens = parser::tokenize(input);
-
-        println!("{:#?}", tokens);
-
         history.add(input.to_string());
 
         // new parser
