@@ -1,3 +1,4 @@
+mod alias;
 mod builtin;
 mod config;
 mod executor;
@@ -48,27 +49,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         print!("{}", greeting);
 
         io::stdout().flush()?;
-
-        let input = match input::read_input(&greeting, &history.entries) {
+        let raw_input = match input::read_input(&greeting, &history.entries) {
             Some(input) => input,
             None => continue,
         };
 
-        let input = input.trim();
+        let raw_input = raw_input.trim();
 
-        if input.is_empty() {
+        if raw_input.is_empty() {
             continue;
         }
-
-        if input == "exit" {
+        if raw_input == "exit" {
             break;
         }
+
+        let input = alias::expand(raw_input, &config.aliases);
+
+        let tokens = parser::tokenize(&input);
 
         history.add(input.to_string());
 
         // new parser
 
-        let tokens = parser::tokenize(input);
+        let tokens = parser::tokenize(&input);
 
         let ast = parser::parse(&tokens);
 
