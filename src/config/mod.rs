@@ -1,18 +1,18 @@
 pub mod lua;
-
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct Config {
     pub theme: Theme,
     pub aliases: std::collections::HashMap<String, String>,
+    pub plugins: Vec<String>,
 }
 
 #[derive(Debug, Clone)]
 pub struct Theme {
     pub greeting: String,
 }
-
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -20,7 +20,9 @@ impl Default for Config {
                 greeting: "{current_directory}@{username} >".to_string(),
             },
 
-            aliases: std::collections::HashMap::new(),
+            aliases: HashMap::new(),
+
+            plugins: Vec::new(),
         }
     }
 }

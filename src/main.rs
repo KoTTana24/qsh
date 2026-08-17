@@ -6,6 +6,7 @@ mod expand;
 mod history;
 mod input;
 mod parser;
+mod plugins;
 mod theme;
 
 use std::env;
@@ -39,6 +40,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut history = History::new();
 
+    let plugin_context = plugins::manager::load(&config.plugins);
+
+    let plugin_aliases = plugin_context.lock().unwrap().aliases.clone();
+
+    let mut aliases = config.aliases.clone();
+
+    aliases.extend(plugin_aliases);
+
     loop {
         let username = get_username();
 
@@ -63,9 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             break;
         }
 
-        let input = alias::expand(raw_input, &config.aliases);
-
-        let tokens = parser::tokenize(&input);
+        let input = alias::expand(raw_input, &aliases);
 
         history.add(input.to_string());
 
