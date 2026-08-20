@@ -2,53 +2,82 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
-use crate::plugins::context;
-
-use super::context::PluginContext;
-
 use mlua::Lua;
 
-use super::api;
+use crate::version::QSH_VERSION;
 
-pub fn load(name: &str, context: Arc<Mutex<PluginContext>>) {
+use super::{
+    api,
+    context::PluginContext,
+    version::{Version, compatible},
+};
+
+pub fn load(name: &str, lua: &Lua, context: Arc<Mutex<PluginContext>>) {
     let path = plugin_path(name);
 
     let code = match fs::read_to_string(&path) {
         Ok(code) => code,
 
         Err(error) => {
-            eprintln!("Failed loading {}: {}", name, error);
+            eprintln!("qsh: failed to load plugin '{}': {}", name, error);
 
             return;
         }
     };
 
-    let lua = Lua::new();
-
-    if let Err(error) = api::register(&lua, context.clone()) {
-        eprintln!("Plugin API error: {}", error);
+    if let Err(error) = lua.load(&code).exec() {
+        eprintln!("qsh: plugin '{}' error: {}", name, error);
 
         return;
     }
 
-    match lua.load(&code).exec() {
-        Ok(_) => {
-            println!("Loaded plugin: {}", name);
-        }
-
-        Err(error) => {
-            eprintln!("Plugin {} error: {}", name, error);
-        }
-    }
     let globals = lua.globals();
 
-    if let Ok(plugin) = globals.get::<mlua::Table>("plugin") {
-        let name = plugin.get::<String>("name").unwrap_or("unknown".into());
+    let plugin = match globals.get::<mlua::Table>("plugin") {
+        Ok(plugin) => plugin,
 
-        let version = plugin.get::<String>("version").unwrap_or("0.0.0".into());
+        Err(_) => {
+            eprintln!("qsh: plugin '{}' has no metadata", name);
 
-        println!("Loaded {} v{}", name, version);
+            return;
+        }
+    };
+
+    let plugin_name = plugin.get::<String>("name").unwrap_or(name.to_string());
+
+    let plugin_version = plugin
+        .get::<String>("version")
+        .unwrap_or("0.0.0".to_string());
+
+    //
+    // Check qsh version
+    //
+
+    if let Ok(qsh_table) = plugin.get::<mlua::Table>("qsh") {
+        if let Ok(required) = qsh_table.get::<String>("min_version") {
+            let current = Version::parse(QSH_VERSION);
+
+            let needed = Version::parse(&required);
+
+            if !compatible(&current, &needed) {
+                eprintln!("qsh: plugin '{}' requires qsh >= {}", plugin_name, required);
+
+                return;
+            }
+        }
     }
+
+    //
+    // Register API
+    //
+
+    if let Err(error) = api::register(lua, context) {
+        eprintln!("qsh: plugin '{}' API error: {}", plugin_name, error);
+
+        return;
+    }
+
+    println!("Loaded {} v{}", plugin_name, plugin_version);
 }
 
 fn plugin_path(name: &str) -> PathBuf {

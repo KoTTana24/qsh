@@ -7,4 +7,6 @@ pub struct PluginInfo {
     pub author: String,
 
     pub description: String,
+
+    pub qsh_version: Option<String>,
 }

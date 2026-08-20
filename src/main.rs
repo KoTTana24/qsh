@@ -8,6 +8,7 @@ mod input;
 mod parser;
 mod plugins;
 mod theme;
+mod version;
 
 use std::env;
 use std::io::{self, Write};
@@ -40,10 +41,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut history = History::new();
 
-    let plugin_context = plugins::manager::load(&config.plugins);
+    let plugin_manager = plugins::manager::PluginManager::new();
 
-    let plugin_aliases = plugin_context.lock().unwrap().aliases.clone();
+    plugin_manager.load_plugins(&config.plugins);
 
+    plugin_manager
+        .context
+        .lock()
+        .unwrap()
+        .events
+        .run_on_start(&plugin_manager.lua);
+
+    let plugin_aliases = plugin_manager.context.lock().unwrap().aliases.clone();
     let mut aliases = config.aliases.clone();
 
     aliases.extend(plugin_aliases);
@@ -65,6 +74,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let raw_input = raw_input.trim();
 
+        history.add(raw_input.to_string());
+
         if raw_input.is_empty() {
             continue;
         }
@@ -74,8 +85,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         let input = alias::expand(raw_input, &aliases);
 
-        history.add(input.to_string());
-
         // new parser
 
         let tokens = parser::tokenize(&input);
@@ -83,7 +92,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let ast = parser::parse(&tokens);
 
         if let Some(ref ast) = ast {
-            executor::execute(ast.clone());
+            executor::execute(ast.clone(), &plugin_manager);
         }
     }
 

@@ -5,7 +5,27 @@ use super::redirect;
 
 use crate::builtin;
 
-pub fn execute(command: ShellCommand) -> bool {
+use crate::plugins::manager::PluginManager;
+pub fn execute(command: ShellCommand, plugins: &PluginManager) -> bool {
+    let allowed =
+        plugins
+            .context
+            .lock()
+            .unwrap()
+            .events
+            .run_before_command(
+                &plugins.lua,
+                command.program.clone(),
+            );
+
+
+    if !allowed {
+        return false;
+    }
+    if let Some(result) = plugins.execute_command(&command.program, command.args.clone()) {
+        return result;
+    }
+
     if let Some(result) = builtin::execute(&command.program, &command.args) {
         return result;
     }
@@ -18,9 +38,7 @@ pub fn execute(command: ShellCommand) -> bool {
 
     redirect::apply_stdout(&mut process, command.stdout);
 
-    let result = process.status();
-
-    match result {
+    match process.status() {
         Ok(status) => {
             if !status.success() {
                 eprintln!("qsh: exited with {}", status);
