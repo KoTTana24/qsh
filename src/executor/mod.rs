@@ -4,9 +4,12 @@ pub mod redirect;
 
 use crate::parser::Statement;
 
-pub fn execute(statement: Statement) -> bool {
+use crate::plugins;
+use crate::plugins::manager::PluginManager;
+
+pub fn execute(statement: Statement, plugins: &PluginManager) -> bool {
     match statement {
-        Statement::Command(command) => command::execute(command),
+        Statement::Command(command) => command::execute(command, plugins),
 
         Statement::Pipeline(pipeline) => pipeline::execute(pipeline.commands),
 
@@ -14,25 +17,25 @@ pub fn execute(statement: Statement) -> bool {
             let mut success = true;
 
             for command in commands {
-                success = execute(command);
+                success = execute(command, plugins);
             }
 
             success
         }
 
         Statement::And(left, right) => {
-            if execute(*left) {
-                execute(*right)
+            if execute(*left, plugins) {
+                execute(*right, plugins)
             } else {
                 false
             }
         }
 
         Statement::Or(left, right) => {
-            if execute(*left) {
+            if execute(*left, plugins) {
                 true
             } else {
-                execute(*right)
+                execute(*right, plugins)
             }
         }
     }
