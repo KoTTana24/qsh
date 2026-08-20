@@ -7,12 +7,12 @@ use mlua::Lua;
 use crate::version::QSH_VERSION;
 
 use super::{
-    api,
     context::PluginContext,
+    types::PluginInfo,
     version::{Version, compatible},
 };
 
-pub fn load(name: &str, lua: &Lua, context: Arc<Mutex<PluginContext>>) {
+pub fn load(name: &str, lua: &Lua, _context: Arc<Mutex<PluginContext>>) -> Option<PluginInfo> {
     let path = plugin_path(name);
 
     let code = match fs::read_to_string(&path) {
@@ -21,14 +21,14 @@ pub fn load(name: &str, lua: &Lua, context: Arc<Mutex<PluginContext>>) {
         Err(error) => {
             eprintln!("qsh: failed to load plugin '{}': {}", name, error);
 
-            return;
+            return None;
         }
     };
 
     if let Err(error) = lua.load(&code).exec() {
         eprintln!("qsh: plugin '{}' error: {}", name, error);
 
-        return;
+        return None;
     }
 
     let globals = lua.globals();
@@ -39,7 +39,7 @@ pub fn load(name: &str, lua: &Lua, context: Arc<Mutex<PluginContext>>) {
         Err(_) => {
             eprintln!("qsh: plugin '{}' has no metadata", name);
 
-            return;
+            return None;
         }
     };
 
@@ -62,22 +62,35 @@ pub fn load(name: &str, lua: &Lua, context: Arc<Mutex<PluginContext>>) {
             if !compatible(&current, &needed) {
                 eprintln!("qsh: plugin '{}' requires qsh >= {}", plugin_name, required);
 
-                return;
+                return None;
             }
         }
     }
 
-    //
-    // Register API
-    //
+    let info = PluginInfo {
+        name: plugin_name.clone(),
 
-    if let Err(error) = api::register(lua, context) {
-        eprintln!("qsh: plugin '{}' API error: {}", plugin_name, error);
+        version: plugin_version.clone(),
 
-        return;
-    }
+        author: plugin
+            .get::<String>("author")
+            .unwrap_or("unknown".to_string()),
 
-    println!("Loaded {} v{}", plugin_name, plugin_version);
+        description: plugin
+            .get::<String>("description")
+            .unwrap_or("".to_string()),
+
+        qsh_version: plugin
+            .get::<mlua::Table>("qsh")
+            .ok()
+            .and_then(|table| table.get::<String>("min_version").ok()),
+
+        path: path.display().to_string(),
+    };
+
+    println!("Loaded {} v{}", info.name, info.version);
+
+    Some(info)
 }
 
 fn plugin_path(name: &str) -> PathBuf {

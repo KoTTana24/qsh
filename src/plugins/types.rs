@@ -9,4 +9,6 @@ pub struct PluginInfo {
     pub description: String,
 
     pub qsh_version: Option<String>,
+
+    pub path: String,
 }

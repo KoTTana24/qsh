@@ -41,7 +41,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut history = History::new();
 
-    let plugin_manager = plugins::manager::PluginManager::new();
+    let mut plugin_manager = plugins::manager::PluginManager::new();
 
     plugin_manager.load_plugins(&config.plugins);
 
